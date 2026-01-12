@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Glass iOS 26</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --glass-shine: rgba(255, 255, 255, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Центрируем по вертикали */
+            overflow-x: hidden;
+            padding: 40px 20px;
+        }
+
+        #bg-canvas {
+            position: fixed; inset: 0; z-index: -1;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            perspective: 1000px; /* Для 3D эффекта */
+        }
+
+        /* --- СТИЛЬ LIQUID GLASS --- */
+        .liquid-card {
+            position: relative;
+            border-radius: 30px; /* Сильные скругления, как в iOS */
+            padding: 40px;
+            
+            /* Основа стекла: почти прозрачная */
+            background: rgba(20, 20, 20, 0.25);
+            
+            /* Самое важное: Blur + Saturate (делает фон сочнее под стеклом) */
+            backdrop-filter: blur(3px) saturate(200%);
+            -webkit-backdrop-filter: blur(3px) saturate(180%);
+            
+            /* Граница: тонкая и полупрозрачная */
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            
+            /* Тени для объема ("толстое стекло") */
+            box-shadow: 
+                0 30px 60px rgba(0, 0, 0, 0.6), /* Глубокая тень */
+                inset 0 0 20px rgba(255, 255, 255, 0.03), /* Внутреннее свечение */
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Внутренний блик края */
+
+            overflow: hidden;
+            transition: transform 0.2s ease-out;
+            cursor: default;
+        }
+
+        /* Динамический прожектор (Свет) */
+        .liquid-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 30px;
+            padding: 2px; /* Толщина градиентной границы */
+            background: radial-gradient(
+                800px circle at var(--mouse-x) var(--mouse-y), 
+                rgba(255, 255, 255, 0.3), 
+                transparent 40%
+            );
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* Второй слой света (поверхность) */
+        .liquid-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(
+                600px circle at var(--mouse-x) var(--mouse-y), 
+                rgba(255, 255, 255, 0.08), 
+                transparent 40%
+            );
+            border-radius: 30px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Контент внутри */
+        .card-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        h2 {
+            font-weight: 700;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+            /* Градиентный текст */
+            background: linear-gradient(90deg, #fff, #a5a5a5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .tag-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .glass-tag {
+            font-size: 0.8rem;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            transition: 0.3s;
+        }
+        
+        .glass-tag:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        /* Кнопка "Action" */
+        .glass-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .glass-btn:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255,255,255,0.4);
+        }
+        
+        /* Особая карточка - широкая */
+        .card-wide {
+            grid-column: 1 / -1;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="container">
+    
+    <div class="liquid-card card-wide">
+        <div class="card-content">
+            <h2>Liquid Interface</h2>
+            <p>Интерфейс дышит, реагирует на свет и создает ощущение физического объема.</p>
+        </div>
+    </div>
+
+    <div class="liquid-card">
+        <div class="card-content">
+            <h2>Blur & Depth</h2>
+            <p>Глубокое размытие фона в сочетании с высокой насыщенностью</p>
+            <div class="tag-container">
+                <span class="glass-tag">Backdrop</span>
+                <span class="glass-tag">Refraction</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="liquid-card">
+        <div class="card-content">
+            <h2>Lighting</h2>
+            <p>Наведи курсор на эту карточку</p>
+            <a href="#" class="glass-btn">Подробнее</a>
+        </div>
+    </div>
+
+    <div class="liquid-card">
+        <div class="card-content">
+            <h2>Haptics</h2>
+            <p>Визуальный тактильный отклик</p>
+            <div class="tag-container">
+                <span class="glass-tag">3D Touch</span>
+                <span class="glass-tag">Physics</span>
+                <span class="glass-tag">Flow</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- 1. ЛОГИКА СВЕТА НА КАРТОЧКАХ (LIQUID LIGHT) ---
+    const cards = document.querySelectorAll('.liquid-card');
+
+    document.addEventListener('mousemove', (e) => {
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Передаем координаты мыши внутрь CSS конкретной карточки
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+        });
+    });
+
+    // Опционально: легкий наклон карточки при наведении (3D Tilt)
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const rotateX = ((y - centerY) / centerY) * -2; // Макс угол 2 градуса
+            const rotateY = ((x - centerX) / centerX) * 2;
+
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+        });
+
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+        });
+    });
+
+
+    // --- 2. ФОНОВЫЕ ЧАСТИЦЫ (Neural Network) ---
+    const canvas = document.getElementById("bg-canvas");
+    const ctx = canvas.getContext("2d");
+    let w, h, particlesArray;
+    
+    // Чуть больше частиц для насыщенности
+    const settings = { quantity: 100, radius: 1.5, speed: 0.2, connectDistance: 130 };
+
+    window.addEventListener('resize', resize);
+    
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        initParticles();
+    }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * w;
+            this.y = Math.random() * h;
+            this.vx = (Math.random() - 0.5) * settings.speed;
+            this.vy = (Math.random() - 0.5) * settings.speed;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            if (this.x < 0 || this.x > w) this.vx = -this.vx;
+            if (this.y < 0 || this.y > h) this.vy = -this.vy;
+        }
+        draw() {
+            ctx.beginPath(); 
+            ctx.arc(this.x, this.y, settings.radius, 0, Math.PI*2);
+            // Чуть более яркие частицы
+            ctx.fillStyle = "rgba(255,255,255,0.5)"; 
+            ctx.fill();
+        }
+    }
+
+    function initParticles() {
+        particlesArray = [];
+        for (let i=0; i<settings.quantity; i++) particlesArray.push(new Particle());
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, w, h);
+        for (let i = 0; i < particlesArray.length; i++) {
+            let p = particlesArray[i];
+            p.update(); p.draw();
+            
+            for (let j = i; j < particlesArray.length; j++) {
+                let p2 = particlesArray[j];
+                let dx = p.x - p2.x;
+                let dy = p.y - p2.y;
+                let dist = dx*dx + dy*dy;
+                
+                if (dist < settings.connectDistance**2) {
+                    ctx.beginPath(); 
+                    ctx.strokeStyle = `rgba(255,255,255,${0.2 * (1 - dist/(settings.connectDistance**2))})`;
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(p.x, p.y); 
+                    ctx.lineTo(p2.x, p2.y); 
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    
+    resize(); 
+    animate();
+</script>
+
+</body>
+</html>
