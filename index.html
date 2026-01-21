@@ -3,264 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vsevlasov-Охота на помидоры</title>
+    <title>vsevlasov</title>
     <style>
-        :root {
-            --neon-pink: #ff96f5d2;
-            --tomato-red: #ff0000;
-            --bg-dark: #0a0a0a;
-        }
-
         body {
-            margin: 0;
-            background-color: var(--bg-dark);
-            color: var(--neon-pink);
-            font-family: 'Courier New', Courier, monospace;
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             height: 100vh;
-            overflow: hidden;
+            margin: 0;
         }
-
-        #game-wrapper {
-            position: relative;
-            border: 3px solid var(--neon-pink);
-            box-shadow: 0 0 25px rgba(255, 51, 153, 0.3);
-        }
-
-        canvas {
-            display: block;
-            background-color: #111;
-            background-image: 
-                linear-gradient(rgba(255, 51, 153, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 51, 153, 0.03) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
+        .content {
             text-align: center;
         }
-
-        h1 { letter-spacing: 5px; text-transform: uppercase; }
-
-        .controls {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 70px);
-            gap: 8px;
-        }
-
-        .btn-sq {
-            width: 70px;
-            height: 70px;
-            background: #1a1a1a;
-            border: 2px solid var(--neon-pink);
-            color: var(--neon-pink);
+        h1 {
             font-size: 1.5rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
+            font-weight: 400;
+            letter-spacing: 1px;
         }
-
-        .btn-sq:active {
-            background: var(--neon-pink);
-            color: #000;
-        }
-
-        button.main-btn {
-            background: transparent;
-            border: 2px solid var(--neon-pink);
-            color: var(--neon-pink);
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            font-family: inherit;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        button.main-btn:hover {
-            background: var(--neon-pink);
-            color: #000;
-        }
-
-        #ui-top {
-            width: 400px;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
+        p {
+            color: #666;
             font-size: 0.9rem;
-            font-weight: bold;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-
-    <div id="ui-top">
-        <span>Собрано помидор: <span id="score">0</span></span>
+    <div class="content">
+        <h1>vsevlasov</h1>
+        <p>ведутся технические работы</p>
     </div>
-
-    <div id="game-wrapper">
-        <div id="start-menu" class="overlay">
-            <h1>Червяк лиза</h1>
-            <br>
-            <button class="main-btn" onclick="startGame()">СТАРТ</button>
-        </div>
-
-        <div id="game-over" class="overlay" style="display: none;">
-            <h1 style="color: #ff0000;">ЧЕРВЯК ЛИЗА ПОГИБ!</h1>
-            <p>РЕЗУЛЬТАТ: <span id="final-score">0</span> ПОМИДОРОВ</p>
-            <br>
-            <button class="main-btn" onclick="startGame()">Начать сначала</button>
-        </div>
-
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-    </div>
-
-    <div class="controls">
-        <div></div>
-        <div class="btn-sq" onmousedown="changeDir('up')">▲</div>
-        <div></div>
-        <div class="btn-sq" onmousedown="changeDir('left')">◀</div>
-        <div class="btn-sq" onmousedown="changeDir('down')">▼</div>
-        <div class="btn-sq" onmousedown="changeDir('right')">▶</div>
-    </div>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const gridSize = 20;
-    const tiles = canvas.width / gridSize;
-
-    let worm, tomato, dx, dy, nextDir, score, gameLoop;
-
-    function startGame() {
-        worm = [
-            {x: 10, y: 10},
-            {x: 9, y: 10},
-            {x: 8, y: 10}
-        ];
-        dx = 1; dy = 0; nextDir = 'right';
-        score = 0;
-        document.getElementById('score').innerText = score;
-        document.getElementById('start-menu').style.display = 'none';
-        document.getElementById('game-over').style.display = 'none';
-        
-        spawnTomato();
-        if(gameLoop) clearInterval(gameLoop);
-        gameLoop = setInterval(update, 150); 
-    }
-
-    function spawnTomato() {
-        let valid = false;
-        while(!valid) {
-            tomato = {
-                x: Math.floor(Math.random() * tiles),
-                y: Math.floor(Math.random() * tiles)
-            };
-            valid = !worm.some(seg => seg.x === tomato.x && seg.y === tomato.y);
-        }
-    }
-
-    function changeDir(dir) {
-        if (dir === 'up' && dy === 0) nextDir = 'up';
-        if (dir === 'down' && dy === 0) nextDir = 'down';
-        if (dir === 'left' && dx === 0) nextDir = 'left';
-        if (dir === 'right' && dx === 0) nextDir = 'right';
-    }
-
-    window.addEventListener('keydown', e => {
-        if (e.key === 'ArrowUp') changeDir('up');
-        if (e.key === 'ArrowDown') changeDir('down');
-        if (e.key === 'ArrowLeft') changeDir('left');
-        if (e.key === 'ArrowRight') changeDir('right');
-    });
-
-    function update() {
-        if (nextDir === 'up') { dx = 0; dy = -1; }
-        if (nextDir === 'down') { dx = 0; dy = 1; }
-        if (nextDir === 'left') { dx = -1; dy = 0; }
-        if (nextDir === 'right') { dx = 1; dy = 0; }
-
-        const head = { x: worm[0].x + dx, y: worm[0].y + dy };
-
-        if (head.x < 0 || head.x >= tiles || head.y < 0 || head.y >= tiles) return gameOver();
-
-        if (worm.some(seg => seg.x === head.x && seg.y === head.y)) return gameOver();
-
-        worm.unshift(head);
-
-        if (head.x === tomato.x && head.y === tomato.y) {
-            score++;
-            document.getElementById('score').innerText = score;
-            spawnTomato();
-        } else {
-            worm.pop();
-        }
-
-        draw();
-    }
-
-    function draw() {
-        ctx.fillStyle = '#111';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const tx = tomato.x * gridSize + gridSize/2;
-        const ty = tomato.y * gridSize + gridSize/2;
-        
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(tx, ty + 2, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#00ff00';
-        ctx.fillRect(tx - 2, ty - 8, 4, 6);
-
-
-        worm.forEach((seg, i) => {
-            ctx.fillStyle = (i === 0) ? '#ff3399' : '#cc2277';
-            
-            const x = seg.x * gridSize;
-            const y = seg.y * gridSize;
-            
-
-            if (i === 0) {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#ff3399';
-            } else {
-                ctx.shadowBlur = 0;
-            }
-
-            ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
-
-            if (i === 0) {
-                ctx.fillStyle = 'white';
-                ctx.fillRect(x + 4, y + 4, 3, 3);
-                ctx.fillRect(x + 13, y + 4, 3, 3);
-            }
-        });
-        ctx.shadowBlur = 0;
-    }
-
-    function gameOver() {
-        clearInterval(gameLoop);
-        document.getElementById('final-score').innerText = score;
-        document.getElementById('game-over').style.display = 'flex';
-    }
-
-
-    draw();
-</script>
 </body>
 </html>
