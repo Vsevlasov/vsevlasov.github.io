@@ -3,330 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vsevlasov</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <title>Vsevlasov-Охота на помидоры</title>
     <style>
         :root {
-            --bg-color: #000000;
-            --glass-shine: rgba(255, 255, 255, 0.4);
+            --neon-pink: #ff96f5d2;
+            --tomato-red: #ff0000;
+            --bg-dark: #0a0a0a;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-color);
-            color: #fff;
-            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--neon-pink);
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            align-items: center; /* Центрируем по вертикали */
-            overflow-x: hidden;
-            padding: 40px 20px;
-        }
-
-        #bg-canvas {
-            position: fixed; inset: 0; z-index: -1;
-        }
-
-        .container {
-            max-width: 1000px;
-            width: 100%;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            perspective: 1000px; /* Для 3D эффекта */
-        }
-
-        /* --- СТИЛЬ LIQUID GLASS --- */
-        .liquid-card {
-            position: relative;
-            border-radius: 30px; /* Сильные скругления, как в iOS */
-            padding: 40px;
-            
-            /* Основа стекла: почти прозрачная */
-            background: rgba(20, 20, 20, 0.25);
-            
-            /* Самое важное: Blur + Saturate (делает фон сочнее под стеклом) */
-            backdrop-filter: blur(3px) saturate(200%);
-            -webkit-backdrop-filter: blur(3px) saturate(180%);
-            
-            /* Граница: тонкая и полупрозрачная */
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            
-            /* Тени для объема ("толстое стекло") */
-            box-shadow: 
-                0 30px 60px rgba(0, 0, 0, 0.6), /* Глубокая тень */
-                inset 0 0 20px rgba(255, 255, 255, 0.03), /* Внутреннее свечение */
-                inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Внутренний блик края */
-
+            height: 100vh;
             overflow: hidden;
-            transition: transform 0.2s ease-out;
-            cursor: default;
         }
 
-        /* Динамический прожектор (Свет) */
-        .liquid-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 30px;
-            padding: 2px; /* Толщина градиентной границы */
-            background: radial-gradient(
-                800px circle at var(--mouse-x) var(--mouse-y), 
-                rgba(255, 255, 255, 0.3), 
-                transparent 40%
-            );
-            -webkit-mask: 
-                linear-gradient(#fff 0 0) content-box, 
-                linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        /* Второй слой света (поверхность) */
-        .liquid-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(
-                600px circle at var(--mouse-x) var(--mouse-y), 
-                rgba(255, 255, 255, 0.08), 
-                transparent 40%
-            );
-            border-radius: 30px;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* Контент внутри */
-        .card-content {
+        #game-wrapper {
             position: relative;
-            z-index: 2;
+            border: 3px solid var(--neon-pink);
+            box-shadow: 0 0 25px rgba(255, 51, 153, 0.3);
         }
 
-        h2 {
-            font-weight: 700;
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-            letter-spacing: -0.02em;
-            /* Градиентный текст */
-            background: linear-gradient(90deg, #fff, #a5a5a5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        canvas {
+            display: block;
+            background-color: #111;
+            background-image: 
+                linear-gradient(rgba(255, 51, 153, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 51, 153, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
         }
 
-        p {
-            font-weight: 300;
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1.6;
-            margin-bottom: 25px;
-        }
-
-        .tag-container {
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .glass-tag {
-            font-size: 0.8rem;
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.9);
-            transition: 0.3s;
-        }
-        
-        .glass-tag:hover {
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 15px rgba(255,255,255,0.2);
-        }
-
-        /* Кнопка "Action" */
-        .glass-btn {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 12px 24px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 500;
-            transition: 0.3s;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .glass-btn:hover {
-            background: #fff;
-            color: #000;
-            box-shadow: 0 0 20px rgba(255,255,255,0.4);
-        }
-        
-        /* Особая карточка - широкая */
-        .card-wide {
-            grid-column: 1 / -1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
             text-align: center;
         }
 
+        h1 { letter-spacing: 5px; text-transform: uppercase; }
+
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            gap: 8px;
+        }
+
+        .btn-sq {
+            width: 70px;
+            height: 70px;
+            background: #1a1a1a;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .btn-sq:active {
+            background: var(--neon-pink);
+            color: #000;
+        }
+
+        button.main-btn {
+            background: transparent;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        button.main-btn:hover {
+            background: var(--neon-pink);
+            color: #000;
+        }
+
+        #ui-top {
+            width: 400px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<canvas id="bg-canvas"></canvas>
-
-<div class="container">
-    
-    <div class="liquid-card card-wide">
-        <div class="card-content">
-            <h2>123</h2>
-            <p>123</p>
-        </div>
+    <div id="ui-top">
+        <span>Собрано помидор: <span id="score">0</span></span>
     </div>
 
-    <div class="liquid-card">
-        <div class="card-content">
-            <h2>123</h2>
-            <p>123</p>
-            <div class="tag-container">
-                <span class="glass-tag">123</span>
-                <span class="glass-tag">777</span>
-            </div>
+    <div id="game-wrapper">
+        <div id="start-menu" class="overlay">
+            <h1>Червяк лиза</h1>
+            <br>
+            <button class="main-btn" onclick="startGame()">СТАРТ</button>
         </div>
+
+        <div id="game-over" class="overlay" style="display: none;">
+            <h1 style="color: #ff0000;">ЧЕРВЯК ЛИЗА ПОГИБ!</h1>
+            <p>РЕЗУЛЬТАТ: <span id="final-score">0</span> ПОМИДОРОВ</p>
+            <br>
+            <button class="main-btn" onclick="startGame()">Начать сначала</button>
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
     </div>
 
-    <div class="liquid-card">
-        <div class="card-content">
-            <h2>123</h2>
-            <p>123</p>
-            <a href="#" class="glass-btn">Подробнее</a>
-        </div>
+    <div class="controls">
+        <div></div>
+        <div class="btn-sq" onmousedown="changeDir('up')">▲</div>
+        <div></div>
+        <div class="btn-sq" onmousedown="changeDir('left')">◀</div>
+        <div class="btn-sq" onmousedown="changeDir('down')">▼</div>
+        <div class="btn-sq" onmousedown="changeDir('right')">▶</div>
     </div>
-
-    <div class="liquid-card">
-        <div class="card-content">
-            <h2>123</h2>
-            <p>123</p>
-            <div class="tag-container">
-                <span class="glass-tag">111</span>
-                <span class="glass-tag">777</span>
-                <span class="glass-tag">111</span>
-            </div>
-        </div>
-    </div>
-
-</div>
 
 <script>
-    // --- 1. ЛОГИКА СВЕТА НА КАРТОЧКАХ (LIQUID LIGHT) ---
-    const cards = document.querySelectorAll('.liquid-card');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridSize = 20;
+    const tiles = canvas.width / gridSize;
 
-    document.addEventListener('mousemove', (e) => {
-        cards.forEach(card => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+    let worm, tomato, dx, dy, nextDir, score, gameLoop;
 
-            // Передаем координаты мыши внутрь CSS конкретной карточки
-            card.style.setProperty('--mouse-x', `${x}px`);
-            card.style.setProperty('--mouse-y', `${y}px`);
-        });
+    function startGame() {
+        worm = [
+            {x: 10, y: 10},
+            {x: 9, y: 10},
+            {x: 8, y: 10}
+        ];
+        dx = 1; dy = 0; nextDir = 'right';
+        score = 0;
+        document.getElementById('score').innerText = score;
+        document.getElementById('start-menu').style.display = 'none';
+        document.getElementById('game-over').style.display = 'none';
+        
+        spawnTomato();
+        if(gameLoop) clearInterval(gameLoop);
+        gameLoop = setInterval(update, 150); 
+    }
+
+    function spawnTomato() {
+        let valid = false;
+        while(!valid) {
+            tomato = {
+                x: Math.floor(Math.random() * tiles),
+                y: Math.floor(Math.random() * tiles)
+            };
+            valid = !worm.some(seg => seg.x === tomato.x && seg.y === tomato.y);
+        }
+    }
+
+    function changeDir(dir) {
+        if (dir === 'up' && dy === 0) nextDir = 'up';
+        if (dir === 'down' && dy === 0) nextDir = 'down';
+        if (dir === 'left' && dx === 0) nextDir = 'left';
+        if (dir === 'right' && dx === 0) nextDir = 'right';
+    }
+
+    window.addEventListener('keydown', e => {
+        if (e.key === 'ArrowUp') changeDir('up');
+        if (e.key === 'ArrowDown') changeDir('down');
+        if (e.key === 'ArrowLeft') changeDir('left');
+        if (e.key === 'ArrowRight') changeDir('right');
     });
 
-    // Опционально: легкий наклон карточки при наведении (3D Tilt)
-    cards.forEach(card => {
-        card.addEventListener('mousemove', (e) => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            
-            const rotateX = ((y - centerY) / centerY) * -2; // Макс угол 2 градуса
-            const rotateY = ((x - centerX) / centerX) * 2;
+    function update() {
+        if (nextDir === 'up') { dx = 0; dy = -1; }
+        if (nextDir === 'down') { dx = 0; dy = 1; }
+        if (nextDir === 'left') { dx = -1; dy = 0; }
+        if (nextDir === 'right') { dx = 1; dy = 0; }
 
-            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
-        });
+        const head = { x: worm[0].x + dx, y: worm[0].y + dy };
 
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
-        });
-    });
+        if (head.x < 0 || head.x >= tiles || head.y < 0 || head.y >= tiles) return gameOver();
 
+        if (worm.some(seg => seg.x === head.x && seg.y === head.y)) return gameOver();
 
-    // --- 2. ФОНОВЫЕ ЧАСТИЦЫ (Neural Network) ---
-    const canvas = document.getElementById("bg-canvas");
-    const ctx = canvas.getContext("2d");
-    let w, h, particlesArray;
-    
-    // Чуть больше частиц для насыщенности
-    const settings = { quantity: 100, radius: 1.5, speed: 0.2, connectDistance: 130 };
+        worm.unshift(head);
 
-    window.addEventListener('resize', resize);
-    
-    function resize() {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
-        initParticles();
+        if (head.x === tomato.x && head.y === tomato.y) {
+            score++;
+            document.getElementById('score').innerText = score;
+            spawnTomato();
+        } else {
+            worm.pop();
+        }
+
+        draw();
     }
 
-    class Particle {
-        constructor() {
-            this.x = Math.random() * w;
-            this.y = Math.random() * h;
-            this.vx = (Math.random() - 0.5) * settings.speed;
-            this.vy = (Math.random() - 0.5) * settings.speed;
-        }
-        update() {
-            this.x += this.vx; this.y += this.vy;
-            if (this.x < 0 || this.x > w) this.vx = -this.vx;
-            if (this.y < 0 || this.y > h) this.vy = -this.vy;
-        }
-        draw() {
-            ctx.beginPath(); 
-            ctx.arc(this.x, this.y, settings.radius, 0, Math.PI*2);
-            // Чуть более яркие частицы
-            ctx.fillStyle = "rgba(255,255,255,0.5)"; 
-            ctx.fill();
-        }
-    }
+    function draw() {
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    function initParticles() {
-        particlesArray = [];
-        for (let i=0; i<settings.quantity; i++) particlesArray.push(new Particle());
-    }
+        const tx = tomato.x * gridSize + gridSize/2;
+        const ty = tomato.y * gridSize + gridSize/2;
+        
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(tx, ty + 2, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(tx - 2, ty - 8, 4, 6);
 
-    function animate() {
-        ctx.clearRect(0, 0, w, h);
-        for (let i = 0; i < particlesArray.length; i++) {
-            let p = particlesArray[i];
-            p.update(); p.draw();
+
+        worm.forEach((seg, i) => {
+            ctx.fillStyle = (i === 0) ? '#ff3399' : '#cc2277';
             
-            for (let j = i; j < particlesArray.length; j++) {
-                let p2 = particlesArray[j];
-                let dx = p.x - p2.x;
-                let dy = p.y - p2.y;
-                let dist = dx*dx + dy*dy;
-                
-                if (dist < settings.connectDistance**2) {
-                    ctx.beginPath(); 
-                    ctx.strokeStyle = `rgba(255,255,255,${0.2 * (1 - dist/(settings.connectDistance**2))})`;
-                    ctx.lineWidth = 1;
-                    ctx.moveTo(p.x, p.y); 
-                    ctx.lineTo(p2.x, p2.y); 
-                    ctx.stroke();
-                }
+            const x = seg.x * gridSize;
+            const y = seg.y * gridSize;
+            
+
+            if (i === 0) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ff3399';
+            } else {
+                ctx.shadowBlur = 0;
             }
-        }
-        requestAnimationFrame(animate);
-    }
-    
-    resize(); 
-    animate();
-</script>
 
+            ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+
+            if (i === 0) {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(x + 4, y + 4, 3, 3);
+                ctx.fillRect(x + 13, y + 4, 3, 3);
+            }
+        });
+        ctx.shadowBlur = 0;
+    }
+
+    function gameOver() {
+        clearInterval(gameLoop);
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('game-over').style.display = 'flex';
+    }
+
+
+    draw();
+</script>
 </body>
 </html>
